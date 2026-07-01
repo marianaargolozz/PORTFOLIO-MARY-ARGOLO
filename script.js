@@ -1,0 +1,167 @@
+const menuBtn = document.querySelector('#menuBtn');
+const menu = document.querySelector('#menu');
+const topbar = document.querySelector('.topbar');
+
+menuBtn?.addEventListener('click', () => {
+  const isOpen = menu.classList.toggle('open');
+  menuBtn.setAttribute('aria-expanded', String(isOpen));
+});
+
+menu?.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', () => {
+    menu.classList.remove('open');
+    menuBtn?.setAttribute('aria-expanded', 'false');
+  });
+});
+
+function updateTopbar(){
+  topbar?.classList.toggle('scrolled', window.scrollY > 12);
+}
+window.addEventListener('scroll', updateTopbar, { passive: true });
+updateTopbar();
+
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('show');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+reveals.forEach(el => observer.observe(el));
+
+const categoryCards = document.querySelectorAll('.categoryCard');
+const projects = document.querySelectorAll('.project');
+const projectGrid = document.querySelector('#projectGrid');
+const projectToolbar = document.querySelector('#projectToolbar');
+const portfolioStatus = document.querySelector('#portfolioStatus');
+const activeCategoryTitle = document.querySelector('#activeCategoryTitle');
+const clearPortfolio = document.querySelector('#clearPortfolio');
+
+const categoryNames = {
+  reels: 'Reels',
+  campanhas: 'Campanhas',
+  lifestyle: 'Lifestyle',
+  cortes: 'Cortes de Live',
+  youtube: 'YouTube',
+  outros: 'Explore mais minhas edições'
+};
+
+function showPortfolioCategory(filter){
+  categoryCards.forEach(item => {
+    const active = item.dataset.filter === filter;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-pressed', String(active));
+  });
+
+  let visibleIndex = 0;
+  projects.forEach(card => {
+    const visible = card.dataset.category === filter;
+    card.classList.toggle('hidden', !visible);
+    card.classList.remove('visible');
+    card.style.removeProperty('--visible-index');
+
+    if (visible) {
+      card.style.setProperty('--visible-index', visibleIndex);
+      visibleIndex += 1;
+      requestAnimationFrame(() => card.classList.add('visible', 'show'));
+    }
+  });
+
+  projectGrid?.classList.add('active');
+  if (projectToolbar) projectToolbar.hidden = false;
+  if (portfolioStatus) portfolioStatus.style.display = 'none';
+  if (activeCategoryTitle) {
+    activeCategoryTitle.textContent = `${categoryNames[filter] || 'Projetos'} · ${visibleIndex} vídeo${visibleIndex === 1 ? '' : 's'}`;
+  }
+
+  setTimeout(() => {
+    projectToolbar?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+}
+
+function resetPortfolio(){
+  categoryCards.forEach(item => {
+    item.classList.remove('active');
+    item.setAttribute('aria-pressed', 'false');
+  });
+  projects.forEach(card => {
+    card.classList.add('hidden');
+    card.classList.remove('visible');
+    card.style.removeProperty('--visible-index');
+  });
+  projectGrid?.classList.remove('active');
+  if (projectToolbar) projectToolbar.hidden = true;
+  if (portfolioStatus) portfolioStatus.style.display = 'block';
+}
+
+categoryCards.forEach(btn => {
+  btn.addEventListener('click', () => showPortfolioCategory(btn.dataset.filter));
+});
+
+clearPortfolio?.addEventListener('click', resetPortfolio);
+resetPortfolio();
+
+const modal = document.querySelector('#modal');
+const modalImg = document.querySelector('#modalImg');
+const modalVideo = document.querySelector('#modalVideo');
+const modalWatch = document.querySelector('#modalWatch');
+const modalCategory = document.querySelector('#modalCategory');
+const modalTitle = document.querySelector('#modalTitle');
+const modalDesc = document.querySelector('#modalDesc');
+
+projects.forEach(card => {
+  card.addEventListener('click', () => {
+    const video = card.dataset.video?.trim();
+    const link = card.dataset.link?.trim();
+    const category = card.dataset.category;
+
+    modalCategory.textContent = categoryNames[category] || category;
+    modalTitle.textContent = card.dataset.title;
+    modalDesc.textContent = card.dataset.desc || '';
+    modalDesc.style.display = card.dataset.desc ? 'block' : 'none';
+
+    if (video) {
+      modalVideo.src = video;
+      modalVideo.style.display = 'block';
+      modalImg.style.display = 'none';
+    } else {
+      modalImg.src = card.dataset.img;
+      modalImg.alt = card.dataset.title;
+      modalImg.style.display = 'block';
+      modalVideo.removeAttribute('src');
+      modalVideo.style.display = 'none';
+    }
+
+    if (link) {
+      modalWatch.href = link;
+      modalWatch.style.display = 'inline-flex';
+    } else if (video) {
+      modalWatch.href = video;
+      modalWatch.style.display = 'inline-flex';
+    } else {
+      modalWatch.style.display = 'none';
+    }
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  });
+});
+
+function closeModal(){
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  if (modalVideo) {
+    modalVideo.pause();
+    modalVideo.removeAttribute('src');
+    modalVideo.load();
+  }
+}
+
+document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeModal));
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeModal();
+});
